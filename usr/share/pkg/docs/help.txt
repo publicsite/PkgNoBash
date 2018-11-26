@@ -73,6 +73,7 @@ These commands can be used with the options above, but not each other:
  repo-convert|rc FILE       convert repo files to pre/post Woof format
 
  add-repo                   add a PPA, Ubuntu, Debian or Slackware repo
+ rm-repo                    remove an installed repo
  add-source                 add a Puppy repo (needs repo file in ~/.packages/)
  update-sources             update the list of available repos
 
