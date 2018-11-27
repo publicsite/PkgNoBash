@@ -1,7 +1,6 @@
 USAGE="Usage: ${bold}pkg add-repo <repo-name|repo-url> [distro] [distro-version] [repo-stream(s)]${endcolour}
 
-Creates a Puppy-compatible repo file from a thrid-party PPA (Ubuntu), Debian
-or Slackware repo.
+Creates a Puppy-compatible repo file from a third-party PPA (Ubuntu), Debian or Slackware repo.
 
 ** For Launchpad PPA or Ubuntu third-party repos:
 
@@ -33,8 +32,8 @@ NOTE: Any ommitted distro names, distro versions or repo streams will be guessed
 
 Examples:
 
-  ${bold}pkg add-repo https://packages.slackonly.com/pub/packages/14.2-x86/PACKAGES.TXT
+  ${bold}pkg add-repo https://rlworkman.net/pkgs/14.2/PACKAGES.TXT.gz
   pkg add-repo https://packages.slackonly.com/pub/packages/14.2-x86/PACKAGES.TXT.gz${endcolour}
 
-NOTE: Slackware repos usually end with PACKAGES.TXT or PACKAGES.TXT.gz
+NOTE: Slackware repos must end with PACKAGES.TXT or PACKAGES.TXT.gz
 "
