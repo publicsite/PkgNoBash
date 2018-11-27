@@ -1263,33 +1263,41 @@ add_repo(){                      # easy way to add Ubuntu/Debian/Slackware third
 
 rm_repo(){                       # remove an installed repo
   if [ ! "$1" -o "$1" = "-" -o "$1" = "-h" -o "$1" = "--help" ];then
-    print_usage rm_repo && exit 1
+    print_usage rm_repo
+    exit 1
   fi
 
   # $1 must be a valid, installed repo name
   if [ "$(repo_list | grep -m1 "^${1}$")" = "" ];then
-    print_usage rm-repo && exit 1
+    print_usage rm-repo
+    exit 1
   fi
 
-  echo "Removing '$1'"
-
+  # get the repo file and URL of the given repo
   local repo_file="$(grep "^$1" ~/.pkg/sources-all | cut -f3 -d'|' )"
-  # remove from third-party lists
   local repo_url="$(grep "^$1" ~/.pkg/sources-all | cut -f4 -d'|')"
 
+  # dont allow removal of 'built in' repos, only user-added repos
+  local matching_user_added_repos="$(grep -m1 "$repo_url" /etc/apt/sources.list /etc/slackpkg/mirrors 2>/dev/null)"
+  if [ "${matching_user_added_repos}" = "" ];then
+    echo "You can only remove the repositories that you installed yourself."
+    echo -e "Use the command  ${bold}pkg repo-list${endcolour}  to see which repos are installed."
+    exit 1
+  fi
+
   # remove the repo file
+  echo "Removing '$1'"
   [ -f "$repo_file" ] && rm -v "$repo_file"
 
   # remove from sources
   grep -v "^$1|" ~/.pkg/sources > /tmp/pkg/sources
   grep -v "^$1|" ~/.pkg/sources-all > /tmp/pkg/sources-all
-
   [ -f /tmp/pkg/sources-all ] && mv /tmp/pkg/sources-all ~/.pkg/sources-all
   [ -f /tmp/pkg/sources     ] && mv /tmp/pkg/sources ~/.pkg/sources
 
+  # remove from third-party lists
   grep -v "$repo_url" /etc/apt/sources.list > /tmp/pkg/sources.list
   grep -v "$repo_url" /etc/slackpkg/mirrors > /tmp/pkg/mirrors
-
   [ -f /tmp/pkg/sources.list ] && mv /tmp/pkg/sources.list /etc/apt/sources.list
   [ -f /tmp/pkg/mirrors ] && mv /tmp/pkg/mirrors /etc/slackpkg/mirrors
 
