@@ -17,6 +17,21 @@
 [ -z "$REPO_DIR" ] && REPO_DIR="$(realpath /root/.packages)"
 [ -z "$REPO_DIR" ]  && REPO_DIR="$(readlink /root/.packages)"
 [ -z "$REPO_DIR" ]  && REPO_DIR="/root/.packages)"
+[ -z "$PKG_KEEP_EPOCH_IN_DOC_REPO" ] && export PKG_KEEP_EPOCH_IN_DOC_REPO=false
+if [ -z "$PKG_KEEP_EPOCH_IN_DOC_REPO" ] || [ "$PKG_KEEP_EPOCH_IN_DOC_REPO" = false ]; then
+  AWK_STRIP_EPOCH='\
+function stripEpoch(s){
+	sub(/^([0-9]*:)?/,"",s)
+	return  s
+}'
+AWK_STRIP_EPOCH_DEPNDS='stripEpoch(v[2])'
+ AWK_STRIP_EPOCH_VERSION='stripEpoch($0)'
+else
+  AWK_STRIP_EPOCH=''
+  AWK_STRIP_EPOCH_DEPNDS='v[2]'
+  AWK_STRIP_EPOCH_VERSION='$0'
+fi 
+
 
 if [ ! "$1" ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]
 then
@@ -241,7 +256,7 @@ function fixdepends(s,   p,a,dep_i,dep_split,pkg_i,ver_i,v,ineq,sout) {
 		  split(ver_i,v," ")
 		  ineq=get_inequality(v[1])
 		  if ( length(v) > 1 ){
-		    sout = sout "&" ineq stripEpoch(v[2])
+		    sout = sout "&" ineq '"$AWK_STRIP_EPOCH_DEPNDS"'\
 		  }
 	    }
 	}
@@ -249,12 +264,9 @@ function fixdepends(s,   p,a,dep_i,dep_split,pkg_i,ver_i,v,ineq,sout) {
 	sub(/(,)?$/,"",sout) ; 
 	return sout;
 }
-function stripEpoch(s){
-	sub(/^(.*:)?/,"",s)
-	return  s
-}
+'"$AWK_STRIP_EPOCH"'\
 /^Package:/     { sub(/^Package: /,"");  PKG=$0; }
-/^Version:/     { sub(/^Version: /,"");  PKGVER=stripEpoch($0); }
+/^Version:/     { sub(/^Version: /,"");  PKGVER='"$AWK_STRIP_EPOCH_VERSION"'; }\
 /^Filename:/    { sub(/^Filename: /,""); PKGPATH=$0; sub(/\/[^\/]*$/,"",PKGPATH); sub(/.*\//,""); PKGFILE=$0; }
 /^Priority:/    { sub(/^Priority: /,""); PKGPRIO=$0; }
 /^Section:/     { sub(/^Section: /,"");  PKGSECTION=$0; }

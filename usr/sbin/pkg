@@ -55,7 +55,8 @@ green="\e[32m"; red="\e[91m"; magenta="\e[95m"; lightblue="\e[36m"; yellow="\e[9
 [ -z "$PKG_NO_COLOURS" ] && export PKG_NO_COLOURS=false # if true, disable coloured output or not
 [ -z "$PKG_CONFIGURE"  ] && export PKG_CONFIGURE=''     # reset
 [ -z "$PKG_CFLAGS"     ] && export PKG_CFLAGS=''        # reset
-[ -z "$PKG_PPA2PUP_FN" ] && if [ ! -z "`which gawk`" ]; then PKG_PPA2PUP_FN=ppa2pup_gawk; else PKG_PPA2PUP_FN=ppa2pup; fi
+[ -z "$PKG_PPA2PUP_FN" ] && if [ ! -z "`which gawk`" ]; then export PKG_PPA2PUP_FN=ppa2pup_gawk; else export PKG_PPA2PUP_FN=ppa2pup; fi
+[ -z "$PKG_KEEP_EPOCH_IN_DOC_REPO" ] && export PKG_KEEP_EPOCH_IN_DOC_REPO=false
 
 # but disable colours if called as gpkg, or the ENV variable PKG_NO_COLOURS is true
 if [ "`basename $0`" != "pkg" -o "$PKG_NO_COLOURS" = true ];then
