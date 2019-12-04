@@ -4194,7 +4194,6 @@ pkg_download(){                   # download a pkg ($1) to WORKDIR FUNCLIST
 
   # the file to save to.. not reliable till we checked the repos
   PKGFILE="${WORKDIR}/${PKGNAME}.$pkg_ext"
-  PKG_FNAME_GUESS="$PKGFILE"
   # set download options
   [ "$FORCE" = true  ] && CONTINUE='' || CONTINUE='-c'
   [ "$ASK"  != true  ] && QTAG=''
@@ -4425,7 +4424,6 @@ pkg_download(){                   # download a pkg ($1) to WORKDIR FUNCLIST
             # clean up output
             [ "$QUIET" != true ] && echo -ne "\b\b\b\b"
             echo
-            ln -s "${PKG_FILENAME}" "$PKG_FNAME_GUESS" #TODO use relative symbolic links + symbolic link cleanup. 
             # if file downloaded ok
             if [ -f "${WORKDIR}/${PKG_FILENAME}" ];then
               echo -e "${green}Downloaded:${endcolour} ${WORKDIR}/${PKG_FILENAME}"
@@ -5503,13 +5501,7 @@ pkg_get(){                        # find, download and install $1 and its deps F
       [ ! -f "$PKGFILE" ] && PKGFILE="`find "$CURDIR" -maxdepth 1 -type f -name "${pkg_name}_*.*"`"
       # maybe try $CURDIR/pkgname*.*
       [ ! -f "$PKGFILE" ] && PKGFILE="`find "$CURDIR" -maxdepth 1 -type f -name "${pkg_name}*.*"`"
-
-      if [ ! -f "$PKGFILE" ]; then
-        PKGFILE_symlink="`find "$CURDIR" -maxdepth 1 -type l -name "${pkg_name}*.*"`"
-        PKGFILE="$(readlink "$PKGFILE_symlink")"
-        rm "$PKGFILE_symlink"
-      fi
-      
+  
       # add extension if Pkg returned an erroneous or user dir
       [ -d "$PKGFILE" ] && PKGFILE="${PKGFILE}.$pkg_ext"
 
