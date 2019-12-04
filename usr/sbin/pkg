@@ -4211,7 +4211,7 @@ pkg_download(){                   # download a pkg ($1) to WORKDIR FUNCLIST
     #NET="`check_net`"; [ $NET -eq 1 ] && echo "You need an internet connection" && exit 2
 
     # for each repo, starting with current repo
-    #repo_file_list | while read repo_file #s243a: Pipes create a new process making so that one can return globals
+    #repo_file_list | while read repo_file #s243a: Pipes create a new process making so that one can not return globals
     for repo_file in `repo_file_list`
     do
 
