@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x
+
 # ppa2pup
 # convert an Ubuntu PPA repo file, into a Puppy compatible repo file.
 
