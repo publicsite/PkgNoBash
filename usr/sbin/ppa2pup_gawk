@@ -130,12 +130,37 @@ else
 
 fi
 
+function set_names(){
+  # if we didn't get the name from the ppa:foo/bar style URL
+  if [[ ! "$1" =~ 'ppa:' ]]
+  then
+
+    # check if this repo is already installed (find its name in Pkg sources files)
+    PPA_NAME="$(grep -m1 "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | cut -f1 -d'|' 2>/dev/null)"
+
+    # get repo name and filename
+    if [ "$PPA_NAME" = "" ];then
+      echo
+      read -e -p "Enter a repo name, such as '${distro_ver}-${stream:-main}':  " -i "${distro_ver}-${stream:-main}" PPA_NAME
+    fi
+    # replace any spaces or underscores with dashes, all lower case
+    PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
+
+    repo_name="$PPA_NAME"
+    repo_filename="Packages-$distro-${PPA_NAME}"
+
+  fi
+	
+}
+
 PACKAGES_PATH=/tmp/ppa_Packages #TODO: use vars instead of litteral paths. See: https://github.com/s243a/woof-CE/blob/8e44442ca9144b202b73737101231115a87488f1/woof-code/rootfs-packages/PKG/usr/sbin/ppa2pup#L204
 
 for stream in $repo_stream $repo_stream2 $repo_stream3 $repo_stream4
 do
 
   [ "$stream" = '' ] && continue
+
+  set_names $1
 
   rm /tmp/ppa_Packages /tmp/ppa_Packages.gz 2>/dev/null
   download_failed=false
@@ -166,25 +191,6 @@ do
     continue
   fi
 
-  # if we didn't get the name from the ppa:foo/bar style URL
-  if [[ ! "$1" =~ 'ppa:' ]]
-  then
-
-    # check if this repo is already installed (find its name in Pkg sources files)
-    PPA_NAME="$(grep -m1 "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | cut -f1 -d'|' 2>/dev/null)"
-
-    # get repo name and filename
-    if [ "$PPA_NAME" = "" ];then
-      echo
-      read -e -p "Enter a repo name, such as '${distro_ver}-${stream:-main}':  " -i "${distro_ver}-${stream:-main}" PPA_NAME
-    fi
-    # replace any spaces or underscores with dashes, all lower case
-    PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
-
-    repo_name="$PPA_NAME"
-    repo_filename="Packages-$distro-${PPA_NAME}"
-
-  fi
 
   echo
   echo "Found URL:"
