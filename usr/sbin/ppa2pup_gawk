@@ -161,7 +161,7 @@ function set_names(){
 
       #e.g. "stretch-tor-main" -- This form was suggested "Scott J" Here: https://gitlab.com/sc0ttj/Pkg/issues/81#note_256979005
       if [ -z "$PPA_NAME" ]; then
-         PPA_NAME="$(grep -e "^${distro_ver}-[^-]*-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "$repo_url"  | cut -f1 -d'|' 2>/dev/null)"
+         PPA_NAME="$(grep -E "^${distro_ver}-[^-]*-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "$repo_url"  | cut -f1 -d'|' 2>/dev/null)"
       fi      
 
       #e.g. "stretch-main-tor" -- This was what was orginally used by s243a. See: https://github.com/s243a/woof-CE/blob/e2b2d00a768017471cc6ac935484ff37fdb04936/woof-code/rootfs-packages/PKG/usr/sbin/ppa2pup#L182  
