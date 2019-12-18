@@ -126,11 +126,59 @@ else
 
 fi
 
+function set_names(){
+  # if we didn't get the name from the ppa:foo/bar style URL
+  if [[ ! "$1" =~ 'ppa:' ]]
+  then
+
+    # check if this repo is already installed (find its name in Pkg sources files)
+    if [ -z "$repo_url" ]; then
+      PPA_NAME="$(grep -m1 "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | cut -f1 -d'|' 2>/dev/null)"
+    else
+    
+      #e.g. "strech-main" -- This was the old default but can overwrite repos entries in ~/.pkg/sources*. 
+      #Therefore we make sure the repo url also matches to avoid overwring the repo. 
+      PPA_NAME="$(grep "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "$repo_url"  | cut -f1 -d'|' 2>/dev/null)"
+
+      #e.g. "stretch-tor-main" -- This form was suggested "Scott J" Here: https://gitlab.com/sc0ttj/Pkg/issues/81#note_256979005
+      if [ -z "$PPA_NAME" ]; then
+         PPA_NAME="$(grep -e "^${distro_ver}-[^-]*-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "$repo_url"  | cut -f1 -d'|' 2>/dev/null)"
+      fi      
+
+      #e.g. "stretch-main-tor" -- This was what was orginally used by s243a. See: https://github.com/s243a/woof-CE/blob/e2b2d00a768017471cc6ac935484ff37fdb04936/woof-code/rootfs-packages/PKG/usr/sbin/ppa2pup#L182  
+      if [ -z "$PPA_NAME" ]; then
+         PPA_NAME="$(grep "^${distro_ver}-${stream:-main}-" /root/.pkg/sources-all | grep -m1 "$repo_url"  | cut -f1 -d'|' 2>/dev/null)"
+      fi
+      
+      #Perhaps a repo doesn't have seperate streams like the puppy repo. See: https://gitlab.com/sc0ttj/Pkg/issues/81#note_257058959
+      if [ -z "$PPA_NAME" ]; then
+         PPA_NAME="$(grep "^${distro_ver}|" /root/.pkg/sources-all | grep -m1 "$repo_url"  | cut -f1 -d'|' 2>/dev/null)"
+      fi
+            
+    fi
+
+    # get repo name and filename
+    if [ "$PPA_NAME" = "" ];then
+      echo
+      read -e -p "Enter a repo name, such as '${distro_ver}-${stream:-main}':  " -i "${distro_ver}-${stream:-main}" PPA_NAME
+    fi
+    # replace any spaces or underscores with dashes, all lower case
+    PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
+
+    repo_name="$PPA_NAME"
+    repo_filename="Packages-$distro-${PPA_NAME}"
+
+  fi
+	
+}
+
 
 for stream in $repo_stream $repo_stream2 $repo_stream3 $repo_stream4
 do
 
   [ "$stream" = '' ] && continue
+
+  set_names $1
 
   rm /tmp/ppa_Packages /tmp/ppa_Packages.gz 2>/dev/null
   download_failed=false
@@ -159,26 +207,6 @@ do
   # if Packages file is empty, dont create a repo for it
   if [ -z /tmp/ppa_Packages ] || [ ! -s /tmp/ppa_Packages ];then
     continue
-  fi
-
-  # if we didn't get the name from the ppa:foo/bar style URL
-  if [[ ! "$1" =~ 'ppa:' ]]
-  then
-
-    # check if this repo is already installed (find its name in Pkg sources files)
-    PPA_NAME="$(grep -m1 "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | cut -f1 -d'|' 2>/dev/null)"
-
-    # get repo name and filename
-    if [ "$PPA_NAME" = "" ];then
-      echo
-      read -e -p "Enter a repo name, such as '${distro_ver}-${stream:-main}':  " -i "${distro_ver}-${stream:-main}" PPA_NAME
-    fi
-    # replace any spaces or underscores with dashes, all lower case
-    PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
-
-    repo_name="$PPA_NAME"
-    repo_filename="Packages-$distro-${PPA_NAME}"
-
   fi
 
   echo
