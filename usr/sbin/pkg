@@ -4398,16 +4398,7 @@ pkg_download(){                   # download a pkg ($1) to WORKDIR FUNCLIST
         PKGFILE="${WORKDIR}/${PKG_FILENAME}"
 
         # skip if downloaded already, print msg
-<<<<<<< HEAD
-        if [ -f "$PKGFILE" -a "$FORCE" = false ]; then
-          DONE=true 
-          echo -e "Already downloaded ${magenta}${PKG_FILENAME}${endcolour}" 
-          pkg_download_rtn="$PKG_FILENAME"
-          continue
-        fi
-=======
         [ -f "$PKGFILE" -a "$FORCE" = false ] && DONE=true && echo -e "Already downloaded ${magenta}${PKG_FILENAME}${endcolour}" && continue
->>>>>>> parent of 140125e... add: pkg_download_rtn & remove | in pkg_download()
 
         # update the package name, based on PKG_FILENAME
         PKGNAME="$(basename "$PKG_FILENAME" .$curr_repo_ext)"
@@ -5485,38 +5476,8 @@ pkg_get(){                        # find, download and install $1 and its deps F
     # DOWNLOAD PKG
     pkg_download "$pkg_name"
 
-<<<<<<< HEAD
-    PKGFILE="$pkg_download_rtn"
     # now lets find the downloaded package
     [ ! -f "$PKGFILE" ] && PKGFILE="$(find "$CURDIR" -maxdepth 1 -type f -name "$(get_pkg_filename "$pkg_name")")"
-=======
-      # get deps early (if any)
-      list_deps "$pkg_name" > ${TMPDIR}/${pkg_name}_dep_list &
-
-      # DOWNLOAD PKG
-      pkg_download "$pkg_name"
-
-      [ ! -f "$PKGFILE" ] && PKGFILE="`find "$CURDIR" -maxdepth 1 -type f -name "${pkg_name}.*${pkg_ext}"`"
-      # try grabbing $CURDIR/pkgname.pkg_ext
-      [ ! -f "$PKGFILE" ] && PKGFILE="`find "$CURDIR" -maxdepth 1 -type f -name "${pkg_name}*.${pkg_ext}"`"
-      # now try grabbing $CURDIR/pkgname.*
-      [ ! -f "$PKGFILE" ] && PKGFILE="`find "$CURDIR" -maxdepth 1 -type f -name "${pkg_name}.*"`"
-      # maybe try $CURDIR/pkgname-*.*
-      [ ! -f "$PKGFILE" ] && PKGFILE="`find "$CURDIR" -maxdepth 1 -type f -name "${pkg_name}-*.*"`"
-      # maybe try $CURDIR/pkgname_*.*
-      [ ! -f "$PKGFILE" ] && PKGFILE="`find "$CURDIR" -maxdepth 1 -type f -name "${pkg_name}_*.*"`"
-      # maybe try $CURDIR/pkgname*.*
-      [ ! -f "$PKGFILE" ] && PKGFILE="`find "$CURDIR" -maxdepth 1 -type f -name "${pkg_name}*.*"`"
-  
-      # add extension if Pkg returned an erroneous or user dir
-      [ -d "$PKGFILE" ] && PKGFILE="${PKGFILE}.$pkg_ext"
-
-      # if we found the package to install in CURDIR
-      if [ -f "${PKGFILE}" ];then
-
-        # check if we install or not
-        if [ "${NO_INSTALL}" = false ];then
->>>>>>> parent of 140125e... add: pkg_download_rtn & remove | in pkg_download()
 
     if [ ! -f "$PKGFILE" ]; then
       PKGFILE_symlink="$(find "$CURDIR" -maxdepth 1 -type l -name "${pkg_name}*.*")"
@@ -6489,11 +6450,7 @@ get_deps(){                       # find, get and install the deps of pkgname ($
         if [ "${NO_INSTALL}" = false ];then
 
           # get the actual file we just downloaded to WORKDIR
-<<<<<<< HEAD
-          DEPFILE="$pkg_download_rtn"
-=======
           DEPFILE="`find "$WORKDIR" -maxdepth 1 -type f -name "$DEPNAME*" 2>/dev/null`"
->>>>>>> parent of 140125e... add: pkg_download_rtn & remove | in pkg_download()
 
           #INSTALL THE DEP, if it was downloaded
           [ "$(is_local_pkg "$DEPFILE" 2>/dev/null)" = true ] && pkg_install "$DEPFILE" 2>/dev/null
