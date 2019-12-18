@@ -4398,7 +4398,7 @@ pkg_download(){                   # download a pkg ($1) to WORKDIR FUNCLIST
         PKGFILE="${WORKDIR}/${PKG_FILENAME}"
 
         # skip if downloaded already, print msg
-         [ -f "$PKGFILE" ] && [ "$FORCE" = false ] && DONE=true && echo -e "Already downloaded ${magenta}${PKG_FILENAME}${endcolour}" && continue
+        [ -f "$PKGFILE" ] && [ "$FORCE" = false ] && DONE=true && echo -e "Already downloaded ${magenta}${PKG_FILENAME}${endcolour}" && continue
 
         # update the package name, based on PKG_FILENAME
         PKGNAME="$(basename "$PKG_FILENAME" .$curr_repo_ext)"
