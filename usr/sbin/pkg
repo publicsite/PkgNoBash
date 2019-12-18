@@ -4398,7 +4398,7 @@ pkg_download(){                   # download a pkg ($1) to WORKDIR FUNCLIST
         PKGFILE="${WORKDIR}/${PKG_FILENAME}"
 
         # skip if downloaded already, print msg
-        [ -f "$PKGFILE" -a "$FORCE" = false ] && DONE=true && echo -e "Already downloaded ${magenta}${PKG_FILENAME}${endcolour}" && continue
+         [ -f "$PKGFILE" ] && [ "$FORCE" = false ] && DONE=true && echo -e "Already downloaded ${magenta}${PKG_FILENAME}${endcolour}" && continue
 
         # update the package name, based on PKG_FILENAME
         PKGNAME="$(basename "$PKG_FILENAME" .$curr_repo_ext)"
@@ -6450,7 +6450,7 @@ get_deps(){                       # find, get and install the deps of pkgname ($
         if [ "${NO_INSTALL}" = false ];then
 
           # get the actual file we just downloaded to WORKDIR
-          DEPFILE="`find "$WORKDIR" -maxdepth 1 -type f -name "$DEPNAME*" 2>/dev/null`"
+          DEPFILE="$(find "$WORKDIR" -maxdepth 1 -type f -name "$DEPNAME*" 2>/dev/null)"
 
           #INSTALL THE DEP, if it was downloaded
           [ "$(is_local_pkg "$DEPFILE" 2>/dev/null)" = true ] && pkg_install "$DEPFILE" 2>/dev/null
