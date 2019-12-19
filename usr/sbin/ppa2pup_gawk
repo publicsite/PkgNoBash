@@ -4,7 +4,7 @@
 # convert an Ubuntu PPA repo file, into a Puppy compatible repo file.
 
 # @TODO1 - fix last few fields of package entries (should contain the supported ubuntu distro, not current system)
-
+TMPDIR=/tmp/pkg/${whoami}
 . /etc/DISTRO_SPECS
 
 #if [ "$DISTRO_BINARY_COMPAT" != "ubuntu" ] && [ "$DISTRO_BINARY_COMPAT" != "debian" ];then
@@ -90,7 +90,28 @@ case $(uname -m) in
   *64)  arch='amd64' ;;
 esac
 
+function get_distro(){
+	local a_repo_url=$1
+	local a_distro_ver=$2	
+	local a_stream=$3
+    local distro_rtn
 
+	distro_rtn=$(cat /root/.pkg/sources-all | awk -v VER="$a_distro_ver" -v  STREAM="$a_stream" -v URL="$a_repo_url" \
+	'BEGIN{FS="|"}
+     /^.+$/ {
+     if ( (index($4,URL) > 0 ) && ( index($3, VER "-" STREAM) > 0 )  ) {
+       split($3, array , "-" )
+       print array[2]
+       exit 0
+     }
+    }')
+    if [ -z "$distro_rtn" ]; then #TODO maybe add some sanity checks in case there are erors in sources-all
+      echo ${DISTRO_BINARY_COMPAT}
+    else
+      echo "$distro_rtn"
+    fi
+    
+}
 
 if [[ "$1" =~ 'ppa:' ]]
 then
@@ -120,8 +141,8 @@ then
   URL=http://ppa.launchpad.net/${username}/${ppaname}/${distro}/dists/${distro_ver}/${repo_stream}/binary-${arch}/Packages.gz
   repo_url=http://ppa.launchpad.net/${username}/${ppaname}/${distro}/
 
-elif [[ "$1" =~ 'http://' ]] || [[ "$1" =~ 'https://' ]];then
-
+elif [[ "$1" =~ 'http://' ]] || [[ "$1" =~ 'https://' ]] || [[ "$1" =~ 'ftp://' ]];then
+  repo_type=debian
   # we got a Debian repo source URL, lets parse it and get the Packages.gz
 
   distro=${DISTRO_BINARY_COMPAT}
@@ -147,6 +168,7 @@ fi
 
 function set_names(){
   # if we didn't get the name from the ppa:foo/bar style URL
+  local distro_input
   if [[ ! "$1" =~ 'ppa:' ]]
   then
 
@@ -179,24 +201,62 @@ function set_names(){
     # get repo name and filename
     if [ "$PPA_NAME" = "" ];then
       echo
-      read -e -p "Enter a repo name, such as '${distro_ver}-${stream:-main}':  " -i "${distro_ver}-${stream:-main}" PPA_NAME
+      read -e -p "Enter a repo name, such as '${distro_ver}-${stream:-main}':  \n"\
+                       "Or to specify the distro enter the full repo file name such as: 'Packages-${distro}-${distro_ver}-${stream:-main}'" \
+                        -i "${distro_ver}-${stream:-main}" PPA_NAME
+      PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
+     PPA_NAME="$(parse_repoName "$PPA_NAME")" #Sets distro, distro_ver and                        
+    else
+      PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
+      repo_name="$PPA_NAME" #Set via parse_repoName repo_filename
+      repo_filename="Packages-$distro-$distro_ver-${PPA_NAME}"     
     fi
-    # replace any spaces or underscores with dashes, all lower case
-    PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
-
-    repo_name="$PPA_NAME"
-    repo_filename="Packages-$distro-${PPA_NAME}"
 
   fi
 	
 }
-
+function parse_repoName(){
+	Arg1="$(echo $1 | tr "-" " ")"
+	set -- $Arg1
+	state="parse-Package"
+	repo_filename="Packages"
+	while [ $# -gt 0 ]; do 	
+      case state in
+ 	    parse-Package)
+	      if [ "$arg" = "Packages" ]; then
+	        PPA_NAME=$2
+	        repo_filename="${repo_filename}-${2}"
+	        distro="$2"
+	        distro_ver="$3"
+	        shift 3
+	     else
+	        PPA_NAME="${PPA_NAME}-${1}"
+	        repo_filename="${repo_filename}-${1}"
+	        distro="${DISTRO_BINARY_COMPAT}"
+	        distro_ver="$1"
+	        shift 1	        
+	     fi
+	    ;;
+	    *)
+	        PPA_NAME="${PPA_NAME}-${1}"
+	        repo_filename="${repo_filename}-${1}"
+	        shift 1
+	        ;;
+	  esac	     
+	done
+}
 PACKAGES_PATH=/tmp/ppa_Packages #TODO: use vars instead of litteral paths. See: https://github.com/s243a/woof-CE/blob/8e44442ca9144b202b73737101231115a87488f1/woof-code/rootfs-packages/PKG/usr/sbin/ppa2pup#L204
 
 for stream in $repo_stream $repo_stream2 $repo_stream3 $repo_stream4
 do
 
   [ "$stream" = '' ] && continue
+
+  if [ "$repo_type"=debian ]; then
+    distro="$(get_distro $repo_url $distro_ver $stream)" 
+    distro="$(get_distro $repo_url $distro_ver $repo_stream)"
+  fi 
+
 
   set_names $1
 
