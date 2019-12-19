@@ -209,7 +209,7 @@ function set_names(){
     else
       PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
       repo_name="$PPA_NAME" #Set via parse_repoName repo_filename
-      repo_filename="Packages-$distro-$distro_ver-${PPA_NAME}"     
+      repo_filename="Packages-$distro-${PPA_NAME}"     
     fi
 
   fi
@@ -220,6 +220,7 @@ function parse_repoName(){
 	set -- $Arg1
 	state="parse-Package"
 	repo_filename="Packages"
+	PPA_NAME=""	
 	while [ $# -gt 0 ]; do 	
       case state in
  	    parse-Package)
