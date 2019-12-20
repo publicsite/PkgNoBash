@@ -21,8 +21,8 @@ TMPDIR=/tmp/pkg/${whoami}
 if [ -z "$PKG_KEEP_EPOCH_IN_DOC_REPO" ] || [ "$PKG_KEEP_EPOCH_IN_DOC_REPO" = false ]; then
   AWK_STRIP_EPOCH='\
 function stripEpoch(s){
-	sub(/^([0-9]*:)?/,"",s)
-	return  s
+  sub(/^([0-9]*:)?/,"",s)
+  return  s
 }'
 AWK_STRIP_EPOCH_DEPNDS='stripEpoch(v[2])'
  AWK_STRIP_EPOCH_VERSION='stripEpoch($0)'
@@ -91,13 +91,13 @@ case $(uname -m) in
 esac
 
 function get_distro(){
-	local a_repo_url=$1
-	local a_distro_ver=$2	
-	local a_stream=$3
+  local a_repo_url=$1
+  local a_distro_ver=$2 
+  local a_stream=$3
     local distro_rtn
 
-	distro_rtn=$(cat /root/.pkg/sources-all | awk -v VER="$a_distro_ver" -v  STREAM="$a_stream" -v URL="$a_repo_url" \
-	'BEGIN{FS="|"}
+  distro_rtn=$(cat /root/.pkg/sources-all | awk -v VER="$a_distro_ver" -v  STREAM="$a_stream" -v URL="$a_repo_url" \
+  'BEGIN{FS="|"}
      /^.+$/ {
      if ( (index($4,URL) > 0 ) && ( index($3, VER "-" STREAM) > 0 )  ) {
        split($3, array , "-" )
@@ -218,38 +218,38 @@ Or to specify the distro enter the full repo file name such as: 'Packages-${dist
     fi
 
   fi
-	
+  
 }
 function parse_repoName(){
-	Arg1="$(echo $1 | tr "-" " ")"
-	set -- $Arg1
-	state="parse-Package"
-	repo_filename="Packages"
-	PPA_NAME=""	
-	while [ $# -gt 0 ]; do 	
+  Arg1="$(echo $1 | tr "-" " ")"
+  set -- $Arg1
+  state="parse-Package"
+  repo_filename="Packages"
+  PPA_NAME="" 
+  while [ $# -gt 0 ]; do  
       case state in
- 	    parse-Package)
-	      if [ "$arg" = "packages" ]  || [ "$arg" = "Packages" ] ; then
-	        PPA_NAME=$2
-	        repo_filename="${repo_filename}-${2}"
-	        distro="$2"
-	        distro_ver="$3"
-	        shift 3
-	     else
-	        PPA_NAME="${PPA_NAME}-${1}"
-	        repo_filename="${repo_filename}-${1}"
-	        distro="${DISTRO_BINARY_COMPAT}"
-	        distro_ver="$1"
-	        shift 1	        
-	     fi
-	    ;;
-	    *)
-	        PPA_NAME="${PPA_NAME}-${1}"
-	        repo_filename="${repo_filename}-${1}"
-	        shift 1
-	        ;;
-	  esac	     
-	done
+      parse-Package)
+        if [ "$arg" = "packages" ]  || [ "$arg" = "Packages" ] ; then
+          PPA_NAME=$2
+          repo_filename="${repo_filename}-${2}"
+          distro="$2"
+          distro_ver="$3"
+          shift 3
+       else
+          PPA_NAME="${PPA_NAME}-${1}"
+          repo_filename="${repo_filename}-${1}"
+          distro="${DISTRO_BINARY_COMPAT}"
+          distro_ver="$1"
+          shift 1         
+       fi
+      ;;
+      *)
+          PPA_NAME="${PPA_NAME}-${1}"
+          repo_filename="${repo_filename}-${1}"
+          shift 1
+          ;;
+    esac       
+  done
 }
 PACKAGES_PATH=/tmp/ppa_Packages #TODO: use vars instead of litteral paths. See: https://github.com/s243a/woof-CE/blob/8e44442ca9144b202b73737101231115a87488f1/woof-code/rootfs-packages/PKG/usr/sbin/ppa2pup#L204
 distor_url_part1="/dists/${distro_ver}/"
@@ -314,46 +314,46 @@ do
 
   rm /tmp/$repo_filename &>/dev/null
 
-	cat "$PACKAGES_PATH" | awk -v PKGOS="$distro" -v PKGOSVER="$distro_ver" \
+  cat "$PACKAGES_PATH" | awk -v PKGOS="$distro" -v PKGOSVER="$distro_ver" \
 'function get_inequality(s){
-	switch(s){
-		case "<":
-		  return "lt"
-		  break
-		case ">":
-		  return "gt"
-		  break
-		case "<=":
-		  return "le"
-		  break
-		case ">=":
-		  return "ge"
-		  break
-		case "=":
-		  return "eq"
-		  break
+  switch(s){
+    case "<":
+      return "lt"
+      break
+    case ">":
+      return "gt"
+      break
+    case "<=":
+      return "le"
+      break
+    case ">=":
+      return "ge"
+      break
+    case "=":
+      return "eq"
+      break
 
     }
     return ""
 }
 function fixdepends(s,   p,a,dep_i,dep_split,pkg_i,ver_i,v,ineq,sout) {
-	split(s,a,",")
-	for (p in a) {
-		match(a[p],/^[ \t]*([^ \t]+)[ \t]*(\((.*)\))?/,dep_split)
-		pkg_i = dep_split[1]
-		sout = sout ",+" pkg_i
-		if ( length(dep_split) > 1 ){
-		  ver_i=dep_split[3]
-		  split(ver_i,v," ")
-		  ineq=get_inequality(v[1])
-		  if ( length(v) > 1 ){
-		    sout = sout "&" ineq '"$AWK_STRIP_EPOCH_DEPNDS"'\
-		  }
-	    }
-	}
-	sub(/^,/,"",sout) ; 
-	sub(/(,)?$/,"",sout) ; 
-	return sout;
+  split(s,a,",")
+  for (p in a) {
+    match(a[p],/^[ \t]*([^ \t]+)[ \t]*(\((.*)\))?/,dep_split)
+    pkg_i = dep_split[1]
+    sout = sout ",+" pkg_i
+    if ( length(dep_split) > 1 ){
+      ver_i=dep_split[3]
+      split(ver_i,v," ")
+      ineq=get_inequality(v[1])
+      if ( length(v) > 1 ){
+        sout = sout "&" ineq '"$AWK_STRIP_EPOCH_DEPNDS"'\
+      }
+      }
+  }
+  sub(/^,/,"",sout) ; 
+  sub(/(,)?$/,"",sout) ; 
+  return sout;
 }
 '"$AWK_STRIP_EPOCH"'\
 /^Package:/     { sub(/^Package: /,"");  PKG=$0; }
