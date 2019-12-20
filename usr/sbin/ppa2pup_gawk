@@ -252,7 +252,7 @@ function parse_repoName(){
   done
 }
 PACKAGES_PATH=/tmp/ppa_Packages #TODO: use vars instead of litteral paths. See: https://github.com/s243a/woof-CE/blob/8e44442ca9144b202b73737101231115a87488f1/woof-code/rootfs-packages/PKG/usr/sbin/ppa2pup#L204
-distor_url_part1="/dists/${distro_ver}/"
+
 for stream in $repo_stream $repo_stream2 $repo_stream3 $repo_stream4
 do
 
@@ -269,10 +269,6 @@ do
   download_failed=false
 
   download_url=${URL//$repo_stream/$stream}
-  
-  distor_url_part2="/dists/${distro_ver}/"
-  
-  download_url=${URL//$distor_url_part1/$distor_url_part2}
 
   wget --quiet $download_url -O /tmp/ppa_Packages.gz 1>/dev/null \
     || download_failed=true
