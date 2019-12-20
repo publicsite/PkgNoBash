@@ -258,9 +258,8 @@ do
 
   [ "$stream" = '' ] && continue
 
-  if [ "$repo_type"=debian ]; then
+  if [ "$repo_type" = debian ]; then
     distro="$(get_distro $repo_url $distro_ver $stream)" 
-    distro="$(get_distro $repo_url $distro_ver $repo_stream)"
   fi 
 
 
