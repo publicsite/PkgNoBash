@@ -24,7 +24,7 @@ function stripEpoch(s){
   sub(/^([0-9]*:)?/,"",s)
   return  s
 }'
-AWK_STRIP_EPOCH_DEPNDS='stripEpoch(v[2])'
+ AWK_STRIP_EPOCH_DEPNDS='stripEpoch(v[2])'
  AWK_STRIP_EPOCH_VERSION='stripEpoch($0)'
 else
   AWK_STRIP_EPOCH=''
@@ -94,7 +94,7 @@ function get_distro(){
   local a_repo_url=$1
   local a_distro_ver=$2 
   local a_stream=$3
-    local distro_rtn
+  local distro_rtn
 
   distro_rtn=$(cat /root/.pkg/sources-all | awk -v VER="$a_distro_ver" -v  STREAM="$a_stream" -v URL="$a_repo_url" \
   'BEGIN{FS="|"}
