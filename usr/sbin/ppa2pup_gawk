@@ -305,7 +305,7 @@ do
   echo "   ~/.packages/$repo_filename"
   echo
 
-  rm "${TMPDIR}"//$repo_filename &>/dev/null
+  rm "${TMPDIR}"/$repo_filename &>/dev/null
 
   cat "$PACKAGES_PATH" | awk -v PKGOS="$distro" -v PKGOSVER="$distro_ver" \
 'function get_inequality(s){
