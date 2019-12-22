@@ -8,7 +8,7 @@
                                                            #alternatively we could derive a name from the mode directory as a fallback
 [ -z "$TMPDIR" ] && TMPDIR=/tmp/pkg/${whoami} || TMPDIR="${TMPDIR%/}"
 TMPDIR=/tmp/pkg/${whoami}
-if [-z "$REPO_DIR" ]; then
+if [ -z "$REPO_DIR" ]; then
   REPO_DIR=${HOME}/.packages       # where the repo files live
   [ -d /var/packages ] && REPO_DIR=/var/packages
 fi
@@ -96,28 +96,118 @@ case $(uname -m) in
   i*86) arch='i386'  ;;
   *64)  arch='amd64' ;;
 esac
+#This function is used to give an example name
+#TODO get input for this function form an external file
+function get_sub_distro(){
+  local a_repo_url=$1
+  local a_distro=$2  
+  local a_distro_ver=$3 
+  local a_stream=$4
+  case "$a_repo_url" in #Not sure how many of these cases are valid. See: https://wiki.debian.org/DebianRepository/Unofficial
+  *tor*) echo tor; ;;
+  *opera*) echo opera; ;;
+  *chrome*) echo chrome; ;;
+  *multimedia*) echo multimedia; ;;
+  *wrt*) echo wrt; ;;
+  *earth*) echo google-earth; ;;
+  *talkplugin*) echo google-talk; ;;
+  *pagespeed*) echo mod-pagespeed; ;; #This is also google. See: https://wiki.debian.org/DebianRepository/Unofficial
+  *mongodb*) echo mongodb; ;;
+  *neuro*) echo neuro; ;;
+  *opennms*) echo opennms; ;;
+  *opera*) echo opera; ;;
+  *oss.oracle*) echo oracle-expres; ;;
+  *virtualbox*) echo virtualbox; ;;
+  *postgresql*) echo postgresql; ;;
+  *qgis*) echo qgis; ;;
+  *) echo DISTRO_SUB_VERSION; ;;
+  esac
+}
 
 function get_distro(){
   local a_repo_url=$1
   local a_distro_ver=$2 
   local a_stream=$3
-  local distro_rtn
+  local maybe_distro_rtn
+  distro_rtn=''
+  distro_match_weakness='' #'0' Is for the best match. Higher Numbers indicate a weaker match
 
   distro_rtn=$(cat /root/.pkg/sources-all | awk -v VER="$a_distro_ver" -v  STREAM="$a_stream" -v URL="$a_repo_url" \
   'BEGIN{FS="|"}
      /^.+$/ {
-     if ( (index($4,URL) > 0 ) && ( index($3, VER "-" STREAM) > 0 )  ) {
+     if ( (index($4,URL) > 0 ) && ( index($3,  "-" VER "-" STREAM) > 0 )  ) {
        split($3, array , "-" )
        print array[2]
        exit 0
      }
     }')
-    if [ -z "$distro_rtn" ]; then #TODO maybe add some sanity checks in case there are erors in sources-all
-      echo ${DISTRO_BINARY_COMPAT}
-    else
-      echo "$distro_rtn"
+    if [ ! -z "$distro_rtn" ]; then
+      distro_match_weakness=0 #Perfect Match
+      return 0
     fi
     
+        
+    case "$a_distro_ver" in
+    "${DISTRO_COMPAT_VERSION}"*)
+       maybe_distro_rtn="${DISTRO_BINARY_COMPAT}"
+       distro_match_weakness=3 #Okay Match        
+       ;;
+    sid-*|buster*|stretch*|wheezy*|squeeze*|lenny*|etch*|sarge*|woody*|potato*|slink*|hamm*)
+       maybe_distro_rtn=debian; 
+       distro_match_weakness=4 #Probably Okay Match     
+       ;;   
+    jessie*)
+      maybe_distro_rtn=debian;
+      distro_match_weakness=5 #Poor Match -- Might also be devuan so return an error       
+      ;;
+    ceres*|beowulf*|ascii*)
+      maybe_distro_rtn=devuan;
+      distro_match_weakness=4 #Probably Okay Match
+      ;;        
+    eoan*|disco*|bionic*|xenial*|trusty|cosmic*|artful*|zesty*|wily*|utopic*|saucy*|raring*|quantal*|precise*|oneiric*|lucid*|karmic*|jaunty*|intrepid*|hardy*|gusty*|feisty*|edgy*|dapper*|breezy*|hoary*|warty*)
+      maybe_distro_rtn=ubuntu
+      distro_match_weakness=4 #Probably Okay Match
+      ;;           
+    *)
+      maybe_distro_rtn="${DISTRO_BINARY_COMPAT}"
+      distro_match_weakness=8 #Very Poor Match (Default Used)
+      ;; #Return an error since the distro returned might be wrong. 
+    esac
+    if [ $distro_match_weakness -gt 5 ]; then
+      distro_rtn=$(cat /root/.pkg/sources-all | awk -v VER="$a_distro_ver"  \
+  'BEGIN{FS="|"}
+     /^.+$/ {
+     if ( index($3,  "-" VER "-") > 0 )  {
+       split($3, array , "-" )
+       if ( array[2] != "puppy" ){
+         out=array[2] #Todo, what if a distro has a "-" in it's name'
+         print out
+         exit 0
+       }
+     }
+    }')
+      distro_match_weakness=6
+      return 0
+    fi    
+    if [ $distro_match_weakness -gt 5 ]; then
+  distro_rtn=$(cat /root/.pkg/sources-all | awk -v VER="${a_distro_ver%%-*}"  \
+  'BEGIN{FS="|"}
+     /^.+$/ {
+     if ( index($3,  "-" VER "-") > 0 )  {
+       split($3, array , "-" )
+       if ( array[2] != "puppy" ){
+         out=array[2] #Todo, what if a distro has a "-" in it's name'
+         print out
+         exit 0
+       }
+       exit 0
+     }
+    }')  
+      distro_match_weakness=7
+      return 0
+    fi      
+    distro_rtn="$maybe_distro_rtn"
+    return 0 #Maybe as an option give a threashold for an acceptable match level
 }
 
 if [[ "$1" =~ 'ppa:' ]]
@@ -176,7 +266,8 @@ fi
 function set_PPA_NAME_name(){
   # if we didn't get the name from the ppa:foo/bar style URL
   local distro_input
-  
+  local suggestion1
+  local suggestion2
   if [[ ! "$1" =~ 'ppa:' ]]
   then
 
@@ -209,22 +300,37 @@ function set_PPA_NAME_name(){
 
     # get repo name and filename
     if [ "$PPA_NAME" = "" ];then
-      echo
-      read -e -p \
-"Enter a repo name, such as '${distro_ver}-${stream:-main}':  
-Or to specify the distro enter the full repo file name such as: 'Packages-${distro}-${distro_ver}-${stream:-main}':
- " \
-                        -i "${distro_ver}-${stream:-main}" PPA_NAME
-      PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
-      parse_repoName "$PPA_NAME" #Sets distro, distro_ver and            
-       if [ -z $URL ]; then
+      if [ $(grep -c -m1 "^${distro_ver}|" /root/.pkg/sources-all) -gt 0 ]; then
+        sub_distro=$(get_sub_distro "${repo_url}" "$distro" "$distro_ver" "$stream")
+        suggestion1="${distro_ver}-${sub_distro}-${stream}"
+        suggestion2="$suggestion1"
+      else
+        suggestion1="${distro_ver}-${stream}"
+        suggestion2="${distro_ver}-${stream}"
+      fi
+      while [ 1 -eq 1 ]; do
+        
+        read -e -p "Enter a repo name, such as '${suggestion1}':  
+ "           -i "${suggestion2}" PPA_NAME
+        PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
+        parse_repoName "$PPA_NAME" #Sets distro, distro_ver and   
+        if [ $(grep -c -m1 "^${PPA_NAME}|" /root/.pkg/sources-all) -gt 0 ]; then
+          echo "Error: Repo file '$distro-$PPA_NAME' already exists in ~/.pkg/sources-all"
+          echo "Please choose a new repo name: $distro-$PPA_NAME-MODIFIER"
+          suggestion1="$PPA_NAME-MODIFIER"
+          suggestion2="$PPA_NAME-"
+        else
+          break
+        fi 
+      done
+      
+      if [ -z $URL ]; then
         URL=$(echo $1 | sed -e 's#/$##g')/dists/${distro_ver}/${repo_stream}/binary-${arch}/Packages.gz            
       fi
     else
       PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
-      repo_name="$PPA_NAME" #Set via parse_repoName repo_filename  
     fi
-
+    repo_name="$PPA_NAME" 
   fi
   
 }
@@ -234,17 +340,18 @@ function parse_repoName(){
   state="parse-Package"
   PPA_NAME="" 
   while [ $# -gt 0 ]; do  
-      case state in
+      case "$state" in
       parse-Package)
         if [ "$arg" = "packages" ]  || [ "$arg" = "Packages" ] ; then
           PPA_NAME=$2
           distro="$2"
           distro_ver="$3"
+          state=default
           shift 3
        else
-          PPA_NAME="${PPA_NAME}-${1}"
-          distro="${DISTRO_BINARY_COMPAT}"
+          PPA_NAME="${1}"
           distro_ver="$1"
+          state=default
           shift 1         
        fi
       ;;
@@ -263,7 +370,10 @@ do
   [ "$stream" = '' ] && continue
 
   if [ "$repo_type" = debian ]; then
-    distro="$(get_distro $repo_url $distro_ver $stream)" 
+    #distro="$(get_distro $repo_url $distro_ver $stream)" 
+    get_distro $repo_url $distro_ver $stream #Can't run as a subshell if we want to return more than one value
+                                             #For instance we might want to return how good our match was. 
+    distro="$distro_rtn" #Returned from the above call to get_distro
   fi 
 
 
