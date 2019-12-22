@@ -263,41 +263,46 @@ else
 
 fi
 
-function set_PPA_NAME_name(){
+function set_PPA_NAME(){
   # if we didn't get the name from the ppa:foo/bar style URL
   local distro_input
   local suggestion1
   local suggestion2
+  local PPA_RECORD
   if [[ ! "$1" =~ 'ppa:' ]]
   then
 
     # check if this repo is already installed (find its name in Pkg sources files)
     if [ -z "$repo_url" ]; then
-      PPA_NAME="$(grep -m1 "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | cut -f1 -d'|' 2>/dev/null)"
+      PPA_RECORD="$(grep -m1 "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | cut -f1,3 -d'|' 2>/dev/null)"
     else
     
       #e.g. "strech-main"
       #Therefore we make sure the repo url also matches to avoid overwring the repo. 
       #Prior to calling this function the trailing slash is stripped off the repo_url. 
-      PPA_NAME="$(grep "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1 -d'|' 2>/dev/null)"
+      PPA_RECORD="$(grep "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1,3 -d'|' 2>/dev/null)"
 
       #e.g. "stretch-tor-main" 
-      if [ -z "$PPA_NAME" ]; then
-         PPA_NAME="$(grep -E "^${distro_ver}-[^-]*-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1 -d'|' 2>/dev/null)"
+      if [ -z "$PPA_RECORD" ]; then
+         PPA_RECORD="$(grep -E "^${distro_ver}-[^-]*-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1,3 -d'|' 2>/dev/null)"
       fi      
 
       #e.g. "stretch-main-tor"
-      if [ -z "$PPA_NAME" ]; then
-         PPA_NAME="$(grep "^${distro_ver}-${stream:-main}-" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1 -d'|' 2>/dev/null)"
+      if [ -z "$PPA_RECORD" ]; then
+         PPA_RECORD="$(grep "^${distro_ver}-${stream:-main}-" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1,3 -d'|' 2>/dev/null)"
       fi
       
       #Perhaps a repo doesn't have seperate streams like the puppy repo. 
-      if [ -z "$PPA_NAME" ]; then
-         PPA_NAME="$(grep "^${distro_ver}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1 -d'|' 2>/dev/null)"
+      if [ -z "$PPA_RECORD" ]; then
+         PPA_RECORD="$(grep "^${distro_ver}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1,3 -d'|' 2>/dev/null)"
       fi
             
     fi
-
+    if [ ! -z "$PPA_RECORD" ]; then
+      PPA_NAME=$(echo "$PPA_RECORD" | cut -f1 -d"|")
+      repo_filename=$(echo "$PPA_RECORD" | cut -f2 -d"|")
+    fi
+    
     # get repo name and filename
     if [ "$PPA_NAME" = "" ];then
       if [ $(grep -c -m1 "^${distro_ver}-${stream}|" /root/.pkg/sources-all) -gt 0 ]; then
@@ -314,12 +319,52 @@ function set_PPA_NAME_name(){
  "           -i "${suggestion2}" PPA_NAME
         PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
         parse_repoName "$PPA_NAME" #Sets distro, distro_ver and   
+        repo_file_guess=${REPO_DIR}/Packages-$distro-${PPA_NAME}
         if [ $(grep -c -m1 "^${PPA_NAME}|" /root/.pkg/sources-all) -gt 0 ]; then
-          echo "Error: Repo file '$distro-$PPA_NAME' already exists in ~/.pkg/sources-all"
+          echo "Error: Repo Name '$distro-$PPA_NAME' already exists in ~/.pkg/sources-all"
           echo "Please choose a new repo name: $distro-$PPA_NAME-MODIFIER"
           suggestion1="$PPA_NAME-MODIFIER"
           suggestion2="$PPA_NAME-"
+        elif  [ -f  "$repo_file_guess" ]; then
+          
+          if [ $(grep -c -m1 "|${repo_file_guess}|" /root/.pkg/sources) -gt 0 ]; then
+            echo "Error: Repo file "${repo_file_guess}" already exists in ${$REPO_DIR}/sources-all"
+            echo "Please choose a new repo name: $distro-$PPA_NAME-MODIFIER"
+            #TODO: the above warning could give a bit more information.          
+          else
+            echo "${yellow}Warning:${endcolour} Overwriting, previously existing repo file "${repo_file_guess}" found in ${REPO_DIR}/sources-all"
+            #TODO: the above warning could give a bit more information. 
+            if [ "$ASK" = yes ]; then
+                echo "continue [y] or chose a different repo name [n]"
+                read -n 1 CONFIRM </dev/tty || CONFIRM=y
+                if [ "${CONFIRM:1:1}" != n ] && [ "${CONFIRM:1:1}" != N ]; then
+                  repo_filename="Packages-$distro-${PPA_NAME}" 
+                  break
+                fi
+                continue
+                 
+            fi
+            repo_filename="Packages-$distro-${PPA_NAME}" 
+            break
+          fi
+          suggestion1="$PPA_NAME-MODIFIER"
+          suggestion2="$PPA_NAME-"
         else
+          if [ "$distro_ver" != "$distro_version_parsed" ]; then
+            echo -e "${yellow}Warning:${endcolour} distro_ver='${distro_ver}', which differes from the expected distro version (i.e. '${distro_ver_parsed}')"
+            if [ "$ASK" = yes ]; then
+                echo "continue [y] or chose a different repo name [n]"
+                read -n 1 CONFIRM </dev/tty || CONFIRM=y
+                if [ "${CONFIRM:1:1}" = n ] || [ "${CONFIRM:1:1}" = N ]; then
+                  continue 
+                else
+                  repo_filename="Packages-$distro-${PPA_NAME}" 
+                  break
+                fi
+            fi
+          fi
+          # @TODO - give option to fix sources.list if distro_ver != distro_version_parsed
+          repo_filename="Packages-$distro-${PPA_NAME}" 
           break
         fi 
       done
@@ -334,6 +379,19 @@ function set_PPA_NAME_name(){
   fi
   
 }
+function parse_distro_version(){
+  local distro_name=$1
+  local distro_version_last=$2
+  local maybe_distro_version=$3
+  local version-modifier=${1#*-}
+  case "$version-modifier" in
+  backports) echo "$maybe_distro_version" ;;
+  proposed-updates) echo "$maybe_distro_version" ;;
+  updates) echo "$maybe_distro_version" ;;
+  backports-sloppy) echo "$maybe_distro_version" ;;
+  *) echo "$distro_version_last" ;;
+  esac
+}
 function parse_repoName(){
   Arg1="$(echo $1 | tr "-" " ")"
   set -- $Arg1
@@ -344,23 +402,30 @@ function parse_repoName(){
       parse-Package)
         if [ "$arg" = "packages" ]  || [ "$arg" = "Packages" ] ; then
           PPA_NAME=$2
-          distro="$2"
-          distro_ver="$3"
-          state=default
+          distro_parsed="$2"
+          distro_ver_parsed="$3" #For now we'll only use this for error checking. 
+          state="parse-Distro_Version"
           shift 3
        else
           PPA_NAME="${1}"
-          distro_ver="$1"
-          state=default
+          distro_ver_parsed="$1"
+          state="parse-Distro_Version"
           shift 1         
        fi
       ;;
-      *)
+      parse-Distro_Version)
           PPA_NAME="${PPA_NAME}-${1}"
-          shift 1
-          ;;
+          distro_ver_parsed="$(parse_distro_version  "$distro" "$distro_ver_parsed" "$PPA_NAME")"          
+          shift 1; ;;      
+      *) #This default action should never happen.
+          echo -e "${yellow}Warning:${endcolour} missing parse action in ppa2pup_gawk():parse_repoName()
+          PPA_NAME='${PPA_NAME}-${1}'"
+          shift 1; ;;
     esac       
   done
+  if [ ! -z "$distro_parsed" ]; then
+    distro="$distro_parsed"
+  fi 
 }
 PACKAGES_PATH="${TMPDIR}"/ppa_Packages #TODO: use vars instead of litteral paths. See: https://github.com/s243a/woof-CE/blob/8e44442ca9144b202b73737101231115a87488f1/woof-code/rootfs-packages/PKG/usr/sbin/ppa2pup#L204
 
@@ -376,9 +441,22 @@ do
     distro="$distro_rtn" #Returned from the above call to get_distro
   fi 
 
-
-  set_PPA_NAME_name $1
-  repo_filename="Packages-$distro-${PPA_NAME}"   
+  unset distro_ver_parsed #This var is set for either new repos -- indirectly via set_PPA_NAME() -- or
+                          #if the the download failed, in which case we assume the wrong distro version
+                          #is given in sources.list and we try to parse the correct version 
+                          #(e.g. stretch-backports) from the repo filename. 
+  set_PPA_NAME $1
+  repo_filename_check="Packages-$distro-${PPA_NAME}"   
+  if [ "$repo_filename_check" != "$repo_filename" ]; then
+    if [ -z "$repo_filename" ]; then
+      echo -e "${yellow}Warning:${endcolour} repo file name missing in config files"
+      echo -e "using expected repo file name instead, '$repo_filename_check'"
+      repo_filename="$repo_filename_check"
+    else
+      echo -e "${yellow}Warning:${endcolour} repo filename: '${repo_filename}'"
+      echo -e "doesn't match expected repo file name: '${repo_filename_check}'"  
+    fi
+  fi
 
   rm "${TMPDIR}"/ppa_Packages "${TMPDIR}"/ppa_Packages.gz 2>/dev/null
   download_failed=false
@@ -387,6 +465,24 @@ do
 
   wget --quiet $download_url -O "${TMPDIR}"/ppa_Packages.gz 1>/dev/null \
     || download_failed=true
+    
+  if [ "$download_failed" = true ]; then
+    parse_repoName ${PPA_NAME}
+    if [ "$distor_ver" != distro_ver_parsed ]; then
+      dist_ver_str1=/dists/"$distor_ver"
+      dist_ver_str2=/dists/"$distro_ver_parsed"
+      download_url=${URL//$dist_ver_str1/$dist_ver_str2}
+      unset download_failed
+        wget --quiet $download_url -O "${TMPDIR}"/ppa_Packages.gz 1>/dev/null \
+    || download_failed=true
+      if [ "$download_failed" != true ]; then
+         echo -e "${yellow}Warning:${endcolour} expected distro version, \"${distor_ver}\""
+         echo -e "but the infered distro version is \"${distro_ver_parsed}\""
+         echo -e "Using infered distro version since the expected distro version doesn't exist"
+         echo -e "Please check your /etc/apt/sources.list file"
+      fi
+    fi
+  fi
 
   if [ ! -f "${TMPDIR}"/ppa_Packages.gz ] || [ $download_failed = true ];then
     echo
