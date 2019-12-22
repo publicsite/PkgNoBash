@@ -4,9 +4,14 @@
 # convert an Ubuntu PPA repo file, into a Puppy compatible repo file.
 
 # @TODO1 - fix last few fields of package entries (should contain the supported ubuntu distro, not current system)
-[ -z "${whoami}" ] && whoami="$(whoami || $(echo user) )"  #One can break the whoami command if the folder premissions are wrong. 
+[ -z "${whoami}" ] && whoami="$(whoami || $(echo user) )"  #One can break the whoami command if the folder premissions are wrong.
+                                                           #alternatively we could derive a name from the mode directory as a fallback
 [ -z "$TMPDIR" ] && TMPDIR=/tmp/pkg/${whoami} || TMPDIR="${TMPDIR%/}"
 TMPDIR=/tmp/pkg/${whoami}
+if [-z "$REPO_DIR" ]; then
+  REPO_DIR=${HOME}/.packages       # where the repo files live
+  [ -d /var/packages ] && REPO_DIR=/var/packages
+fi
 . /etc/DISTRO_SPECS
 
 #if [ "$DISTRO_BINARY_COMPAT" != "ubuntu" ] && [ "$DISTRO_BINARY_COMPAT" != "debian" ];then
@@ -304,7 +309,7 @@ do
   echo "   $repo_name"
   echo
   echo "Repo file to create:"
-  echo "   ~/.packages/$repo_filename"
+  echo "   ${REPO_DIR}/$repo_filename"
   echo
 
   rm "${TMPDIR}"/$repo_filename &>/dev/null
@@ -379,7 +384,7 @@ function fixdepends(s,   p,a,dep_i,dep_split,pkg_i,ver_i,v,ineq,sout) {
     exit 1
   fi
 
-  mv  "${TMPDIR}"/${repo_filename}_sorted  ~/.packages/$repo_filename
+  mv  "${TMPDIR}"/${repo_filename}_sorted  ${REPO_DIR}/$repo_filename
 
   echo "Success! File created."
   echo

@@ -4,7 +4,14 @@
 # convert an Ubuntu PPA repo file, into a Puppy compatible repo file.
 
 # @TODO1 - fix last few fields of package entries (should contain the supported ubuntu distro, not current system)
-
+[ -z "${whoami}" ] && whoami="$(whoami || $(echo user) )"  #One can break the whoami command if the folder premissions are wrong.
+                                                           #alternatively we could derive a name from the mode directory as a fallback
+[ -z "$TMPDIR" ] && TMPDIR=/tmp/pkg/${whoami} || TMPDIR="${TMPDIR%/}"
+TMPDIR=/tmp/pkg/${whoami}
+if [-z "$REPO_DIR" ]; then
+  REPO_DIR=${HOME}/.packages       # where the repo files live
+  [ -d /var/packages ] && REPO_DIR=/var/packages
+fi
 . /etc/DISTRO_SPECS
 
 #if [ "$DISTRO_BINARY_COMPAT" != "ubuntu" ] && [ "$DISTRO_BINARY_COMPAT" != "debian" ];then
@@ -56,10 +63,10 @@ fi
 
 
 # create a dir to work in
-mkdir -p /tmp/ppa_pkgs
+mkdir -p ${TMPDIR}/ppa_pkgs
 
 # remove any old files
-rm /tmp/ppa_pkgs/* 2>/dev/null
+rm ${TMPDIR}/ppa_pkgs/* 2>/dev/null
 
 
 # we need to find the correct Packages.gz for the distro (debian/ubuntu),
@@ -181,15 +188,15 @@ do
 
   set_names $1
 
-  rm /tmp/ppa_Packages /tmp/ppa_Packages.gz 2>/dev/null
+  rm ${TMPDIR}/ppa_Packages ${TMPDIR}/ppa_Packages.gz 2>/dev/null
   download_failed=false
 
   download_url=${URL//$repo_stream/$stream}
 
-  wget --quiet $download_url -O /tmp/ppa_Packages.gz 1>/dev/null \
+  wget --quiet $download_url -O ${TMPDIR}/ppa_Packages.gz 1>/dev/null \
     || download_failed=true
 
-  if [ ! -f /tmp/ppa_Packages.gz ] || [ $download_failed = true ];then
+  if [ ! -f ${TMPDIR}/ppa_Packages.gz ] || [ $download_failed = true ];then
     echo
     echo "ERROR: the PPA repo '$repo_name' not found for $distro $distro_ver:"
     echo
@@ -202,11 +209,11 @@ do
   fi
 
 
-  gunzip /tmp/ppa_Packages.gz
+  gunzip ${TMPDIR}/ppa_Packages.gz
 
 
   # if Packages file is empty, dont create a repo for it
-  if [ -z /tmp/ppa_Packages ] || [ ! -s /tmp/ppa_Packages ];then
+  if [ -z ${TMPDIR}/ppa_Packages ] || [ ! -s ${TMPDIR}/ppa_Packages ];then
     continue
   fi
 
@@ -219,16 +226,16 @@ do
   echo "   $repo_name"
   echo
   echo "Repo file to create:"
-  echo "   ~/.packages/$repo_filename"
+  echo "   ${REPO_DIR}/$repo_filename"
   echo
 
   # break Packages file into separate files
   number=1
-  cat /tmp/ppa_Packages | while read line
+  cat ${TMPDIR}/ppa_Packages | while read line
   do
 
     echo "$line" | grep -qE '^Priority|^Installed-Size|^Maintainer|^MD5|^SHA|^Description-md5|^Suggests|^Provides|^Source|^Conflicts|^Breaks' && continue
-    echo "$line" >> /tmp/ppa_pkgs/pkginfo$number
+    echo "$line" >> ${TMPDIR}/ppa_pkgs/pkginfo$number
     [ "$line" = "" ] && number=$(($number + 1))
 
     #[ $number -gt 5 ] && break # for testing only
@@ -236,16 +243,16 @@ do
   done
 
 
-  rm /tmp/$repo_filename ~/.packages/$repo_filename &>/dev/null
+  rm ${TMPDIR}/$repo_filename ${REPO_DIR}/$repo_filename &>/dev/null
 
   # go through each file and make a pet.spec entry from it,
-  # and append that entry tp /tmp/ppa_pkgs/$repo_filename
-  for pkginfo_file in $(ls -1 /tmp/ppa_pkgs/)
+  # and append that entry tp ${TMPDIR}/ppa_pkgs/$repo_filename
+  for pkginfo_file in $(ls -1 ${TMPDIR}/ppa_pkgs/)
   do
 
-    [ ! -f /tmp/ppa_pkgs/$pkginfo_file ] && continue
+    [ ! -f ${TMPDIR}/ppa_pkgs/$pkginfo_file ] && continue
 
-    pkginfo="`cat /tmp/ppa_pkgs/$pkginfo_file 2>/dev/null`"
+    pkginfo="`cat ${TMPDIR}/ppa_pkgs/$pkginfo_file 2>/dev/null`"
     [ "$pkginfo" = "" ] && continue
 
     # convert deps list from:
@@ -285,17 +292,17 @@ do
       2>/dev/null)"
 
     # replace olddeps entry with new one in the file
-    if [ ! -z "pkgdeps" ] && [ ! -z "$newpkgdeps" ] && [ -f /tmp/ppa_pkgs/$pkginfo_file ]
+    if [ ! -z "pkgdeps" ] && [ ! -z "$newpkgdeps" ] && [ -f ${TMPDIR}/ppa_pkgs/$pkginfo_file ]
     then
 
-      sed -i "s/${pkgdeps}/${newpkgdeps}/" /tmp/ppa_pkgs/$pkginfo_file 2>/dev/null
+      sed -i "s/${pkgdeps}/${newpkgdeps}/" ${TMPDIR}/ppa_pkgs/$pkginfo_file 2>/dev/null
 
     fi
 
 
     # deps should now be in the right format in the file itself,
     # update our info var
-    pkginfo="$(cat /tmp/ppa_pkgs/$pkginfo_file)"
+    pkginfo="$(cat ${TMPDIR}/ppa_pkgs/$pkginfo_file)"
 
     # so lets build pet.specs entry:
     # like this one:
@@ -325,24 +332,24 @@ do
 
     entry="$pkg_name|$pkgname_only|$pkg_ver|$pkg_build_no|$pkg_cat|$pkg_size|$pkg_path|$pkg_fname|$pkg_deps|$pkg_desc|$pkg_os|$pkg_os_ver|"
 
-    echo "$entry" >> /tmp/$repo_filename
+    echo "$entry" >> ${TMPDIR}/$repo_filename
 
   done
 
 
-  rm /tmp/ppa_pkgs/* /tmp/${repo_filename}_sorted 2>/dev/null
+  rm ${TMPDIR}/ppa_pkgs/* ${TMPDIR}/${repo_filename}_sorted 2>/dev/null
 
 
   # sort & move the repo file
-  sort -u /tmp/$repo_filename > /tmp/${repo_filename}_sorted 2>/dev/null
+  sort -u ${TMPDIR}/$repo_filename > ${TMPDIR}/${repo_filename}_sorted 2>/dev/null
 
 
-  if [ ! -f /tmp/${repo_filename}_sorted ];then
+  if [ ! -f ${TMPDIR}/${repo_filename}_sorted ];then
     echo "Error: Repo file not created!"
     exit 1
   fi
 
-  mv  /tmp/${repo_filename}_sorted  ~/.packages/$repo_filename
+  mv  ${TMPDIR}/${repo_filename}_sorted  ${REPO_DIR}/$repo_filename
   echo "Success! File created."
   echo
 
@@ -353,10 +360,10 @@ do
   # if already added to ~/.pkg/sources[-all], remove it
   if [ "$(cat ~/.pkg/sources     | grep -m1 "^$repo_name|")" != "" ] || \
      [ "$(cat ~/.pkg/sources-all | grep -m1 "^$repo_name|")" != "" ];then
-    cat ~/.pkg/sources | grep -v "^$repo_name|" > /tmp/pkgsources
-    cat ~/.pkg/sources-all | grep -v "^$repo_name|" > /tmp/pkgsources-all
-    mv /tmp/pkgsources ~/.pkg/sources
-    mv /tmp/pkgsources-all ~/.pkg/sources-all
+    cat ~/.pkg/sources | grep -v "^$repo_name|" > ${TMPDIR}/pkgsources
+    cat ~/.pkg/sources-all | grep -v "^$repo_name|" > ${TMPDIR}/pkgsources-all
+    mv ${TMPDIR}/pkgsources ~/.pkg/sources
+    mv ${TMPDIR}/pkgsources-all ~/.pkg/sources-all
   fi
 
 
