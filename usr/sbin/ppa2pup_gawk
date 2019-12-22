@@ -300,7 +300,7 @@ function set_PPA_NAME_name(){
 
     # get repo name and filename
     if [ "$PPA_NAME" = "" ];then
-      if [ $(grep -c -m1 "^${distro_ver}|" /root/.pkg/sources-all) -gt 0 ]; then
+      if [ $(grep -c -m1 "^${distro_ver}-${stream}|" /root/.pkg/sources-all) -gt 0 ]; then
         sub_distro=$(get_sub_distro "${repo_url}" "$distro" "$distro_ver" "$stream")
         suggestion1="${distro_ver}-${sub_distro}-${stream}"
         suggestion2="$suggestion1"
