@@ -171,6 +171,7 @@ fi
 function set_PPA_NAME_name(){
   # if we didn't get the name from the ppa:foo/bar style URL
   local distro_input
+  
   if [[ ! "$1" =~ 'ppa:' ]]
   then
 
@@ -181,21 +182,22 @@ function set_PPA_NAME_name(){
     
       #e.g. "strech-main"
       #Therefore we make sure the repo url also matches to avoid overwring the repo. 
-      PPA_NAME="$(grep "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "$repo_url"  | cut -f1 -d'|' 2>/dev/null)"
+      #Prior to calling this function the trailing slash is stripped off the repo_url. 
+      PPA_NAME="$(grep "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1 -d'|' 2>/dev/null)"
 
       #e.g. "stretch-tor-main" 
       if [ -z "$PPA_NAME" ]; then
-         PPA_NAME="$(grep -E "^${distro_ver}-[^-]*-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "$repo_url"  | cut -f1 -d'|' 2>/dev/null)"
+         PPA_NAME="$(grep -E "^${distro_ver}-[^-]*-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1 -d'|' 2>/dev/null)"
       fi      
 
       #e.g. "stretch-main-tor"
       if [ -z "$PPA_NAME" ]; then
-         PPA_NAME="$(grep "^${distro_ver}-${stream:-main}-" /root/.pkg/sources-all | grep -m1 "$repo_url"  | cut -f1 -d'|' 2>/dev/null)"
+         PPA_NAME="$(grep "^${distro_ver}-${stream:-main}-" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1 -d'|' 2>/dev/null)"
       fi
       
       #Perhaps a repo doesn't have seperate streams like the puppy repo. 
       if [ -z "$PPA_NAME" ]; then
-         PPA_NAME="$(grep "^${distro_ver}|" /root/.pkg/sources-all | grep -m1 "$repo_url"  | cut -f1 -d'|' 2>/dev/null)"
+         PPA_NAME="$(grep "^${distro_ver}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1 -d'|' 2>/dev/null)"
       fi
             
     fi
