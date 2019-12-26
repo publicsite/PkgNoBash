@@ -383,8 +383,8 @@ function parse_distro_version(){
   local distro_name=$1
   local distro_version_last=$2
   local maybe_distro_version=$3
-  local version-modifier=${1#*-}
-  case "$version-modifier" in
+  local version_modifier=${1#*-}
+  case "$version_modifier" in
   backports) echo "$maybe_distro_version" ;;
   proposed-updates) echo "$maybe_distro_version" ;;
   updates) echo "$maybe_distro_version" ;;
