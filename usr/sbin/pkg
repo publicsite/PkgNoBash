@@ -7583,10 +7583,7 @@ while [ $# != 0 ]; do # get all options ($# means all options)
       --repo-info|-ri|repo-info|ri)         [ "$2" != "-" ] && print_repo_info "$2";;
   --repo-file-list|-rfl|repo-file-list|rfl) [ "$2" != "-" ] && repo_file_list "$2" ;;
       --repo-update|-ru|repo-update|ru)     update_repo "$2";;
-      --add-source|add-source)              [ "$2" = '-' ] && print_usage add-source || \
-                                            if [ "`echo ${2} |grep '|'`" ]; then add_source "$2"; 
-                                            elif [ "`echo ${1} |grep '|'`" ]; then add_source "$1"; 
-                                            else print_usage add-source; fi ;;
+      --add-source|add-source)              [ "`echo $2|grep '|'`" = '' ] || [ "$2" = '-' ] && print_usage add-source || add_source "$2";;
       --add-repo|add-repo)                  [ ! "$2" ] || [ "$2" = '-'  ] && print_usage add-repo || shift; add_repo "$@"; exit 0;;
       --rm-repo|rm-repo)                    [ ! "$2" ] || [ "$2" = '-'  ] && print_usage rm-repo  || rm_repo "$2"; exit 0;;
       --update-sources|update-sources)      update_sources ;;
