@@ -1797,6 +1797,7 @@ add_repo(){                       # add Pkg/Ubuntu/Debian/Slackware third-party 
         exit 0
       }
 
+      # if we got here, it's not a Pkg repo we're installing,
       mkdir -p /etc/apt
       [ ! -f /etc/apt/sources.list ] && touch /etc/apt/sources.list
       if [ $(grep -c "$1" "/etc/apt/sources.list") -eq 0 ]; then
