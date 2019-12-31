@@ -277,22 +277,22 @@ function set_PPA_NAME(){
 
     # check if this repo is already installed (find its name in Pkg sources files)
     if [ -z "$repo_url" ]; then
-      PPA_RECORD="$(grep -m1 "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | cut -f1,3 -d'|' 2>/dev/null)"
+      PPA_RECORD="$(grep -m1 "^${distro_ver}-${stream}|" /root/.pkg/sources-all | cut -f1,3 -d'|' 2>/dev/null)"
     else
     
       #e.g. "strech-main"
       #Therefore we make sure the repo url also matches to avoid overwring the repo. 
       #Prior to calling this function the trailing slash is stripped off the repo_url. 
-      PPA_RECORD="$(grep "^${distro_ver}-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1,3 -d'|' 2>/dev/null)"
+      PPA_RECORD="$(grep "^${distro_ver}-${stream}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1,3 -d'|' 2>/dev/null)"
 
       #e.g. "stretch-tor-main" 
       if [ -z "$PPA_RECORD" ]; then
-         PPA_RECORD="$(grep -E "^${distro_ver}-[^-]*-${stream:-main}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1,3 -d'|' 2>/dev/null)"
+         PPA_RECORD="$(grep "^${distro_ver}-[^-]*-${stream}|" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1,3 -d'|' 2>/dev/null)"
       fi      
 
       #e.g. "stretch-main-tor"
       if [ -z "$PPA_RECORD" ]; then
-         PPA_RECORD="$(grep "^${distro_ver}-${stream:-main}-" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1,3 -d'|' 2>/dev/null)"
+         PPA_RECORD="$(grep "^${distro_ver}-${stream}-" /root/.pkg/sources-all | grep -m1 "|${repo_url}/\?|"  | cut -f1,3 -d'|' 2>/dev/null)"
       fi
       
       #Perhaps a repo doesn't have seperate streams like the puppy repo. 
