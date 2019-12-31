@@ -103,6 +103,7 @@ function get_sub_distro(){
   local a_distro=$2  
   local a_distro_ver=$3 
   local a_stream=$4
+  local a_default=${5:-DISTRO_SUB_VERSION}
   case "$a_repo_url" in #Not sure how many of these cases are valid. See: https://wiki.debian.org/DebianRepository/Unofficial
   *tor*) echo tor; ;;
   *opera*) echo opera; ;;
@@ -121,7 +122,7 @@ function get_sub_distro(){
   *postgresql*) echo postgresql; ;;
   *qgis*) echo qgis; ;;
   *node*) echo node.js; ;;
-  *) echo DISTRO_SUB_VERSION; ;;
+  *) echo "$a_default"; ;;
   esac
 }
 
@@ -270,6 +271,7 @@ function set_PPA_NAME(){
   local suggestion1
   local suggestion2
   local PPA_RECORD
+  local sep
   if [[ ! "$1" =~ 'ppa:' ]]
   then
 
@@ -311,8 +313,10 @@ function set_PPA_NAME(){
         suggestion1="${distro_ver}-${sub_distro}-${stream}"
         suggestion2="$suggestion1"
       else
-        suggestion1="${distro_ver}-${stream}"
-        suggestion2="${distro_ver}-${stream}"
+        sub_distro=$(get_sub_distro "${repo_url}" "$distro" "$distro_ver" "$stream" "" )
+        sep="-"; [ ! -z "$sub_distro" ] && sep="-${sub_distro}-"
+        suggestion1="${distro_ver}${sep}${stream}"
+        suggestion2="${distro_ver}${sep}${stream}"
       fi
       while [ 1 -eq 1 ]; do
         
