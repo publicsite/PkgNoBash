@@ -355,7 +355,7 @@ function set_PPA_NAME(){
           suggestion1="$PPA_NAME-MODIFIER"
           suggestion2="$PPA_NAME-"
         else
-          if [ "$distro_ver" != "$distro_version_parsed" ]; then
+          if [ "$distro_ver" != "${distro_ver_parsed}" ]; then
             echo -e "${yellow}Warning:${endcolour} distro_ver='${distro_ver}', which differes from the expected distro version (i.e. '${distro_ver_parsed}')"
             if [ "$ASK" = yes ]; then
                 echo "continue [y] or chose a different repo name [n]"
