@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # ppa2pup
 # convert an Ubuntu PPA repo file, into a Puppy compatible repo file.
@@ -73,17 +73,17 @@ esac
 
 
 
-if [[ "$1" =~ 'ppa:' ]]
+if expr "X$1" : 'Xppa:'
 then
 
   # we got a 'PPA' URL, lets parse it and get the Packages.gz
-  ppaname="${1/*\//}"
-  username="${1/\/*/}"
-  username="${username//ppa:/}"
-  ppaname="${ppaname//ppa:/}"
+  ppaname="$(printf "%s" "${1}" | sed "s#.*\/##g")"
+  username="$(printf "%s" "${1}" | sed "s#*\\\.*#.*\\\#g")"
+  username="$(printf "%s" "${username}" | sed "s#ppa:#g")"
+  ppaname="$(printf "%s" "${ppaname}" | sed "s#ppa:#g")"
 
   # get username, but strip special chars
-  PPA_NAME="${username//[-_:]/}"
+  PPA_NAME="$(printf "%s" "${username}" | sed "s#[-_:]##g")"
 
   distro=${2:-$DISTRO_BINARY_COMPAT}
   distro_ver=${3:-$DISTRO_COMPAT_VERSION}
@@ -105,13 +105,13 @@ then
   URL=http://ppa.launchpad.net/${username}/${ppaname}/${distro}/dists/${distro_ver}/${repo_stream}/binary-${arch}/Packages.gz
   repo_url=http://ppa.launchpad.net/${username}/${ppaname}/${distro}/
 
-elif [[ "$1" =~ 'http://' ]] || [[ "$1" =~ 'https://' ]];then
+elif "X$1" : 'Xhttp://' || "X$1" : 'Xhttps://' ;then
 
   # we got a Debian repo source URL, lets parse it and get the Packages.gz
 
   distro=${DISTRO_BINARY_COMPAT}
   distro_ver=${2:-$DISTRO_COMPAT_VERSION}
-  repo_url=$(echo $1 | sed -e 's#/$##g')/
+  repo_url="$(echo "$1" | sed -e 's#/$##g')/"
   repo_stream=${3:-main}
   repo_stream2=''
   repo_stream3=''
@@ -126,7 +126,7 @@ elif [[ "$1" =~ 'http://' ]] || [[ "$1" =~ 'https://' ]];then
   [ "$8" != '' ] && repo_stream6=${8}
   [ "$9" != '' ] && repo_stream7=${9}
 
-  URL=$(echo $1 | sed -e 's#/$##g')/dists/${distro_ver}/${repo_stream}/binary-${arch}/Packages.gz
+  URL="$(echo "$1" | sed -e 's#/$##g')/dists/${distro_ver}/${repo_stream}/binary-${arch}/Packages.gz"
 
 else
 
@@ -145,9 +145,9 @@ do
   rm /tmp/ppa_Packages /tmp/ppa_Packages.gz 2>/dev/null
   download_failed=false
 
-  download_url=${URL//$repo_stream/$stream}
+  download_url="$(printf "%s" "${URL}" | sed "s#$repo_stream#$stream#g")"
 
-  wget --quiet $download_url -O /tmp/ppa_Packages.gz 1>/dev/null \
+  wget --quiet "$download_url" -O /tmp/ppa_Packages.gz 1>/dev/null \
     || download_failed=true
 
   if [ ! -f /tmp/ppa_Packages.gz ] || [ $download_failed = true ];then
@@ -167,12 +167,12 @@ do
 
 
   # if Packages file is empty, dont create a repo for it
-  if [ -z /tmp/ppa_Packages ] || [ ! -s /tmp/ppa_Packages ];then
+  if [ ! -s /tmp/ppa_Packages ];then
     continue
   fi
 
   # if we didn't get the name from the ppa:foo/bar style URL
-  if [[ ! "$1" =~ 'ppa:' ]]
+  if ! "X$1" : 'Xppa:'
   then
 
     # check if this repo is already installed (find its name in Pkg sources files)
@@ -183,10 +183,11 @@ do
     if [ "$PPA_NAME" = "" ];then
       PPA_NOT_YET_INSTALLED=true
       echo
-      read -e -p "Enter a repo name, such as '${distro_ver}-${stream:-main}':  " -i "${distro_ver}-${stream:-main}" PPA_NAME
+      printf "Enter a repo name, such as '%s-%s':  " -i "%s-%s" "${distro_ver}" "${stream:-main}" "${distro_ver}" "${stream:-main}"
+      read -r PPA_NAME
     fi
     # replace any spaces or underscores with dashes, all lower case
-    PPA_NAME="$( echo "${PPA_NAME// /-}" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
+    PPA_NAME="$( echo "${PPA_NAME}" | sed "s# #-#g" | tr '_' '-' | tr '[:upper:]' '[:lower:]' )"
 
     # PRECAUTION: if repo name is "bionic-main", "stretch-main" (etc), it may override
     # another, much more important repo.. let's prevent that by renaming the repo
@@ -196,32 +197,34 @@ do
        [ "$PPA_NAME" = "${DISTRO_COMPAT_VERSION}-main" ]
     then
       # if a launchpad.net URL, build a new name from the URL
-      if [[ "$1" =~ 'launchpad' ]];then
+      if  "X$1" : 'Xlaunchpad' ;then
         PPA_NAME="$2-$(echo "$1" | cut -f4 -d'/')"
-        PPA_NAME="${PPA_NAME//-debian/}"
-        PPA_NAME="${PPA_NAME//-ubuntu/}"
-        DUPED_PPA_NAME="$(grep -m1 "^$PPA_NAME|" $HOME/.pkg/sources-all | cut -f1 -d'|' 2>/dev/null)"
+        PPA_NAME="$(printf "%s" "${PPA_NAME}" | sed "s#-debian##g")"
+        PPA_NAME="$(printf "%s" "${PPA_NAME}" | sed "s#-ubuntu##g")"
+        DUPED_PPA_NAME="$(grep -m1 "^$PPA_NAME|" "$HOME/.pkg/sources-all" | cut -f1 -d'|' 2>/dev/null)"
         if [ $PPA_NOT_YET_INSTALLED = false ] && [ "$DUPED_PPA_NAME" != "" ];then
           EXISTING_PPA_NAME="$(grep -m1 "$repo_url" ~/.pkg/sources-all | cut -f1 -d'|')"
           if [ "$EXISTING_PPA_NAME" = "" ];then
             echo
             echo "The auto-generated repo name of '$PPA_NAME' is already taken, and may override other repos."
             echo
-            read -e -p "Enter a new repo name, such as '${distro_ver}-reponame':  " -i "${distro_ver}-reponame" PPA_NAME
+            printf "Enter a new repo name, such as '%s-reponame':  " -i "%s-reponame" "${distro_ver}" "${distro_ver}"
+            read -r PPA_NAME
           else
             PPA_NAME="$EXISTING_PPA_NAME"
           fi
         fi
       # if not launchpad URL, just ask for a new name
       elif [ $PPA_NOT_YET_INSTALLED = false ];then
-        DUPED_PPA_NAME="$(grep -m1 "^$PPA_NAME|" $HOME/.pkg/sources-all | cut -f1 -d'|' 2>/dev/null)"
+        DUPED_PPA_NAME="$(grep -m1 "^$PPA_NAME|" "$HOME/.pkg/sources-all" | cut -f1 -d'|' 2>/dev/null)"
         if [ $PPA_NOT_YET_INSTALLED = false ] && [ "$DUPED_PPA_NAME" != "" ];then
           EXISTING_PPA_NAME="$(grep -m1 "$repo_url" ~/.pkg/sources-all | cut -f1 -d'|')"
           if [ "$EXISTING_PPA_NAME" = "" ];then
             echo
             echo "The auto-generated repo name of '$PPA_NAME' is unsafe, and may override other repos."
             echo
-            read -e -p "Enter a new repo name, such as '${distro_ver}-reponame':  " -i "${distro_ver}-reponame" PPA_NAME
+            printf "Enter a new repo name, such as '%s-reponame':  " -i "%s-reponame" "${distro_ver}" "${distro_ver}"
+            read -r PPA_NAME
           else
             PPA_NAME="$EXISTING_PPA_NAME"
           fi
@@ -248,28 +251,29 @@ do
 
   # break Packages file into separate files
   number=1
-  cat /tmp/ppa_Packages | while read line
+  while read -r line
   do
 
     echo "$line" | grep -qE '^Priority|^Installed-Size|^Maintainer|^MD5|^SHA|^Description-md5|^Suggests|^Provides|^Source|^Conflicts|^Breaks' && continue
-    echo "$line" >> /tmp/ppa_pkgs/pkginfo$number
-    [ "$line" = "" ] && number=$(($number + 1))
+    echo "$line" >> "/tmp/ppa_pkgs/pkginfo$number"
+    [ "$line" = "" ] && number="$(expr "$number" + 1)"
 
     #[ $number -gt 5 ] && break # for testing only
 
-  done
+  done < /tmp/ppa_Packages
 
 
-  rm /tmp/$repo_filename ~/.packages/$repo_filename &>/dev/null
+  rm "/tmp/$repo_filename" ~/.packages/"$repo_filename" >/dev/null 2>&1
 
   # go through each file and make a pet.spec entry from it,
   # and append that entry tp /tmp/ppa_pkgs/$repo_filename
-  for pkginfo_file in $(ls -1 /tmp/ppa_pkgs/)
+  for pkginfo_file in /tmp/ppa_pkgs/*
   do
+    [ -e "$pkginfo_file" ] || break #handle the case of no ppainfo_file
 
-    [ ! -f /tmp/ppa_pkgs/$pkginfo_file ] && continue
+    [ ! -f "/tmp/ppa_pkgs/$pkginfo_file" ] && continue
 
-    pkginfo="`cat /tmp/ppa_pkgs/$pkginfo_file 2>/dev/null`"
+    pkginfo="$(cat "/tmp/ppa_pkgs/$pkginfo_file" 2>/dev/null)"
     [ "$pkginfo" = "" ] && continue
 
     # convert deps list from:
@@ -281,7 +285,7 @@ do
     #  +nginx-full-1.14.0-0+bionic0,+libc6-2.4,+libpam0g-0.99.7.1
     #
 
-    pkgdeps=`echo "$pkginfo" | grep '^Depends: '`
+    pkgdeps="$(echo "$pkginfo" | grep '^Depends: ')"
 
     newpkgdeps="$(echo "$pkgdeps" \
       | sed \
@@ -309,17 +313,17 @@ do
       2>/dev/null)"
 
     # replace olddeps entry with new one in the file
-    if [ ! -z "pkgdeps" ] && [ ! -z "$newpkgdeps" ] && [ -f /tmp/ppa_pkgs/$pkginfo_file ]
+    if [ -n "$newpkgdeps" ] && [ -f "/tmp/ppa_pkgs/$pkginfo_file" ]
     then
 
-      sed -i "s/${pkgdeps}/${newpkgdeps}/" /tmp/ppa_pkgs/$pkginfo_file 2>/dev/null
+      sed -i "s/${pkgdeps}/${newpkgdeps}/" "/tmp/ppa_pkgs/$pkginfo_file" 2>/dev/null
 
     fi
 
 
     # deps should now be in the right format in the file itself,
     # update our info var
-    pkginfo="$(cat /tmp/ppa_pkgs/$pkginfo_file)"
+    pkginfo="$(cat "/tmp/ppa_pkgs/$pkginfo_file")"
 
     # so lets build pet.specs entry:
     # like this one:
@@ -338,7 +342,7 @@ do
     pkg_name="$pkg_name${ver_sep}$pkg_ver"
     pkg_cat="$(echo   "$pkginfo" | grep -m1 '^Section: ' | cut -f2 -d' ')"
     pkg_size="$(echo  "$pkginfo" | grep -m1 '^Size: '    | cut -f2 -d' ')"
-    pkg_size="$(($pkg_size / 1024))K"
+    pkg_size="$(expr "$pkg_size" / 1024)K"
     pkg_path="$(echo "$pkginfo" | grep -m1 '^Filename: '| cut -f2 -d' ')"
     pkg_fname="$(basename "$pkg_path")"
     pkg_path="$(dirname "$pkg_path")"
@@ -349,36 +353,36 @@ do
 
     entry="$pkg_name|$pkgname_only|$pkg_ver|$pkg_build_no|$pkg_cat|$pkg_size|$pkg_path|$pkg_fname|$pkg_deps|$pkg_desc|$pkg_os|$pkg_os_ver|"
 
-    echo "$entry" >> /tmp/$repo_filename
+    echo "$entry" >> "/tmp/$repo_filename"
 
   done
 
 
-  rm /tmp/ppa_pkgs/* /tmp/${repo_filename}_sorted 2>/dev/null
+  rm /tmp/ppa_pkgs/* "/tmp/${repo_filename}_sorted" 2>/dev/null
 
 
   # sort & move the repo file
-  sort -u /tmp/$repo_filename > /tmp/${repo_filename}_sorted 2>/dev/null
+  sort -u "/tmp/$repo_filename" > "/tmp/${repo_filename}_sorted" 2>/dev/null
 
 
-  if [ ! -f /tmp/${repo_filename}_sorted ];then
+  if [ ! -f "/tmp/${repo_filename}_sorted" ];then
     echo "Error: Repo file not created!"
     exit 1
   fi
 
-  mv  /tmp/${repo_filename}_sorted  ~/.packages/$repo_filename
+  mv "/tmp/${repo_filename}_sorted" ~/.packages/"$repo_filename"
   echo "Success! File created."
   echo
 
-  fallback_repos="$(pkg repo-list | grep -v $repo_name | tr '\n' ' ')"
+  fallback_repos="$(pkg repo-list | grep -v "$repo_name" | tr '\n' ' ')"
   repo_entry="$repo_name|deb|$repo_filename|$repo_url||||$fallback_repos"
 
 
   # if already added to ~/.pkg/sources[-all], remove it
-  if [ "$(cat ~/.pkg/sources     | grep -m1 "^$repo_name|")" != "" ] || \
-     [ "$(cat ~/.pkg/sources-all | grep -m1 "^$repo_name|")" != "" ];then
-    cat ~/.pkg/sources | grep -v "^$repo_name|" > /tmp/pkgsources
-    cat ~/.pkg/sources-all | grep -v "^$repo_name|" > /tmp/pkgsources-all
+  if [ "$(grep -m1 "^$repo_name|" ~/.pkg/sources )" != "" ] || \
+     [ "$(grep -m1 "^$repo_name|" ~/.pkg/sources-all )" != "" ];then
+    grep -v "^$repo_name|" ~/.pkg/sources > /tmp/pkgsources
+    grep -v "^$repo_name|" ~/.pkg/sources-all > /tmp/pkgsources-all
     mv /tmp/pkgsources ~/.pkg/sources
     mv /tmp/pkgsources-all ~/.pkg/sources-all
   fi
@@ -392,11 +396,11 @@ do
   pkg update-sources
   echo
   echo "Repo info:"
-  pkg repo-info $repo_name
+  pkg repo-info "$repo_name"
   echo
 
 
-  if [ "$(cat ~/.pkg/sources | grep -m1 "^$repo_name|")" != "" ];then
+  if [ "$(grep -m1 "^$repo_name|" ~/.pkg/sources)" != "" ];then
     echo "Success! Repo added and available to use."
     echo
     echo "To use this repo, simply type the following and hit ENTER:"
