@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if [ "$1" = '-h' ] || [ "$1" = '-help' ] || [ "$1" = '--help' ];then
 
@@ -46,7 +46,7 @@ apt_sources_list="$(grep -h '^deb ' /etc/apt/sources.list /etc/apt/sources.list.
 )"
 
 echo
-echo "${apt_sources_list//|/ }"
+echo "${apt_sources_list}" | sed "s#|# #g"
 
 
 # for each repo in $apt_sources_list, use `ppa2pup` to install the repo
@@ -55,17 +55,22 @@ do
   [ "$line" = "" ] && continue
   [ "$line" = "\n" ] && continue
   echo
-  echo "Processing:  ${line//|/ }"
+  echo "Processing:  $(printf "%s" "${line}" | sed "s#|# #g")"
 
   # ask user to update repo
-  read -r -N 1 -p "Update repo from '$(echo ${line//|/ } | cut -f1 -d' ')'? [y/n] " ANSWER
+  numchars=0
+  while [ "$numchars" != 2 ]; do
+     printf "Update repo from %s? [y/n]" "$(echo "${line}" | sed "s#|# #g" | cut -f1 -d' ')"
+     read -r ANSWER
+     numchars="$(printf "%s" "$ANSWER" | wc -m)"
+  done
 
   if [ "$ANSWER" = 'y' ] || [ "$ANSWER" = 'Y' ];then
     echo
-    ppa2pup ${line//|/ }
+    ppa2pup "$(${line} | sed "s#|# #g")"
     retval=$?
   fi
   echo
 done
 
-exit $retval
+exit "$retval"
