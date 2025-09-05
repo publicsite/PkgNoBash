@@ -333,10 +333,10 @@ function fixdepends(s,   p,a,dep_i,dep_split,pkg_i,ver_i,v,ineq,sout) {
 
 
   # if already added to ~/.pkg/sources[-all], remove it
-  if [ "$(grep -m1 "^$repo_name ~/.pkg/sources |")" != "" ] || \
-     [ "$(grep -m1 "^$repo_name ~/.pkg/sources-all |")" != "" ];then
-    grep -v "^$repo_name ~/.pkg/sources |" > /tmp/pkgsources
-    grep -v "^$repo_name ~/.pkg/sources-all |" > /tmp/pkgsources-all
+  if [ "$(grep -m1 "^$repo_name|" ~/.pkg/sources)" != "" ] || \
+     [ "$(grep -m1 "^$repo_name|" ~/.pkg/sources-all)" != "" ];then
+    grep -v "^$repo_name|" ~/.pkg/sources > /tmp/pkgsources
+    grep -v "^$repo_name|" ~/.pkg/sources-all > /tmp/pkgsources-all
     mv /tmp/pkgsources ~/.pkg/sources
     mv /tmp/pkgsources-all ~/.pkg/sources-all
   fi
@@ -354,7 +354,7 @@ function fixdepends(s,   p,a,dep_i,dep_split,pkg_i,ver_i,v,ineq,sout) {
   echo
 
 
-  if [ "$(grep -m1 "^$repo_name ~/.pkg/sources |")" != "" ];then
+  if [ "$(grep -m1 "^$repo_name|" ~/.pkg/sources)" != "" ];then
     echo "Success! Repo added and available to use."
     echo
     echo "To use this repo, simply type the following and hit ENTER:"
