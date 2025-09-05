@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 # original script by technosaurus
 #18012012: fixed to work on akita: no busybox, wget -c, added some translations, error checking, etc
  
 #usage, cli options
 { 
-	[ "$1" = "" ] && echo "Usage: $(basename $0) URL [output file]" && exit 1
+	[ "$1" = "" ] && echo "Usage: $(basename "$0") URL [output file]" && exit 1
 if [ "$2" != "" ];then # add output file or dir, if given
 	OUTPUTFILE="-O$2"
 else 
@@ -14,8 +14,8 @@ export OUTPUTFILE
 }
 # i18n, translations
 {
-[ $myLANG ] || myLANG=${LANGUAGE%% *}
-[ $myLANG ] || myLANG=${LANG%_*}
+[ "$myLANG" ] || myLANG=${LANGUAGE%% *}
+[ "$myLANG" ] || myLANG=${LANG%_*}
 case $myLANG in
    de*)
 		Loc_downloading_file="Download der Datei"
@@ -52,11 +52,11 @@ esac
 }
 
 download_progress(){ #pass a file as $1 to download with a GUI progress bar
-while ([ $# -gt 0 ]) do
+while [ $# -gt 0 ]; do
    LANG=C # should avoid wget returning weird values
-   wget "$OUTPUTFILE" -4 -c "$1" 2>&1 | while read LINE; do
+   wget "$OUTPUTFILE" -4 -c "$1" 2>&1 | while read -r LINE; do
       case $LINE in
-         *%*)LINE=${LINE##*..};echo ${LINE%%%*};;
+         *%*)LINE=${LINE##*..};echo "${LINE%%%*};;"
       esac
    done |Xdialog --wm-class "button" --title "${Loc_downloading_file:-Downloading File}" --gauge "${Loc_download_progess:-Download progress} ($# ${Loc_files_remaining:-files remaining}.)
 ${Loc_current_file_is:-Current file is}:
